@@ -1,0 +1,52 @@
+version: '3'
+
+services:
+  nginx:
+    image: nginx:latest
+    ports:
+      - ${API_LOCAL_PORT}:${NGINX_INTERNAL_PORT}
+    volumes:
+      - ./:/var/www/html/
+      - ./.env:/var/www/html/src/.env
+      - ./docker/nginx/current.conf:/etc/nginx/conf.d/default.conf
+    restart: always
+    depends_on:
+      - database
+      - php-fpm
+    networks:
+      - public_net
+
+  php-fpm:
+    links:
+      - database
+    build:
+      context: "./docker"
+      dockerfile: "php/Dockerfile"
+    volumes:
+      - ./:/var/www/html/
+      - ./.env:/var/www/html/src/.env
+      - ./docker/php/www.conf:/usr/local/etc/php-fpm.d/www.conf
+      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini
+    restart: always
+    networks:
+      - public_net
+
+  database:
+    container_name: mysql
+    image: mysql:latest
+    restart: always
+    ports:
+      - ${DB_LOCAL_PORT}:${DB_PORT}
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+    volumes:
+      - ${DB_LOCAL_DATA_PATH}:${DB_INTERNAL_DATA_PATH}
+    networks:
+      - public_net
+
+networks:
+    public_net:
+        driver: bridge
